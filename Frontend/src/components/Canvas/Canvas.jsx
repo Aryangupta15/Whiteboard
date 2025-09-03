@@ -111,7 +111,7 @@ export default function Canvas({
   const cursor = useCursor(selectedTool, panning.panOffset, imagePreview || images.imageToPlace, ERASER_RADIUS);
 
   const getLaserColor = useCallback((color) => {
-    if (color === '#191919' || color === '#000000') {
+    if (color === '#ffffffff') {
       return '#FFFFFF';
     }
     return color;

@@ -539,44 +539,46 @@ export default function Canvas({
     redrawCanvas();
   }, [shapes, redrawCanvas]);
 
-  // ==================== IMAGE HANDLING ====================
+  // ==================== IMAGE HANDLING - FIXED FOR SYNC ====================
 
   const handleFileSelect = useCallback((e) => {
     const file = e.target.files[0];
     if (file && file.type.startsWith('image/')) {
-      const url = URL.createObjectURL(file);
+      // FIX: Convert to base64 for cross-client compatibility
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const maxSize = 400;
+          let width = img.naturalWidth;
+          let height = img.naturalHeight;
 
-      const img = new Image();
-      img.onload = () => {
-        const maxSize = 400;
-        let width = img.naturalWidth;
-        let height = img.naturalHeight;
+          if (width > maxSize || height > maxSize) {
+            const scale = Math.min(maxSize / width, maxSize / height);
+            width = Math.round(width * scale);
+            height = Math.round(height * scale);
+          }
 
-        if (width > maxSize || height > maxSize) {
-          const scale = Math.min(maxSize / width, maxSize / height);
-          width = Math.round(width * scale);
-          height = Math.round(height * scale);
-        }
+          setImagePreview({
+            src: event.target.result, // FIX: Use base64 data URL instead of blob URL
+            width,
+            height,
+            name: file.name,
+            originalWidth: img.naturalWidth,
+            originalHeight: img.naturalHeight
+          });
 
-        setImagePreview({
-          url,
-          width,
-          height,
-          name: file.name,
-          originalWidth: img.naturalWidth,
-          originalHeight: img.naturalHeight
-        });
+          console.log(`✅ Image "${file.name}" ready instantly! Click anywhere to place it.`);
+        };
 
-        console.log(`✅ Image "${file.name}" ready instantly! Click anywhere to place it.`);
+        img.onerror = () => {
+          console.error('❌ Failed to load image:', file.name);
+          alert('Failed to load the selected image.');
+        };
+
+        img.src = event.target.result; // Use base64 data URL
       };
-
-      img.onerror = () => {
-        console.error('❌ Failed to load image:', file.name);
-        alert('Failed to load the selected image.');
-        URL.revokeObjectURL(url);
-      };
-
-      img.src = url;
+      reader.readAsDataURL(file); // FIX: Read as data URL (base64) instead of blob
     }
 
     e.target.value = '';
@@ -596,6 +598,7 @@ export default function Canvas({
 
     saveToHistory(shapes);
 
+    // FIX: Create image shape with base64 data
     const newImageShape = {
       id: imageId,
       tool: "image",
@@ -603,7 +606,7 @@ export default function Canvas({
       y: clickY - imagePreview.height / 2,
       width: imagePreview.width,
       height: imagePreview.height,
-      src: imagePreview.url,
+      src: imagePreview.src, // FIX: Base64 data URL that works across clients
       opacity: opacity / 100,
       name: imagePreview.name
     };
@@ -629,9 +632,11 @@ export default function Canvas({
         redrawCanvas();
       });
     };
-    imgElement.src = imagePreview.url;
+    imgElement.src = imagePreview.src; // Base64 data URL
 
+    // FIX: Broadcast to other users with base64 data
     broadcastDrawingImmediate(newImageShape);
+
     setImagePreview(null);
     setMousePosition({ x: 0, y: 0 });
 
@@ -639,11 +644,7 @@ export default function Canvas({
       onToolChange('hand');
     }
 
-    setTimeout(() => {
-      URL.revokeObjectURL(imagePreview.url);
-    }, 500);
-
-    console.log(`🎯 Image "${imagePreview.name}" placed INSTANTLY at (${Math.round(clickX)}, ${Math.round(clickY)})`);
+    console.log(`🎯 Image "${imagePreview.name}" placed and synced at (${Math.round(clickX)}, ${Math.round(clickY)})`);
 
     return true;
   }, [imagePreview, shapes, saveToHistory, panning.panOffset, opacity, images, broadcastDrawingImmediate, redrawCanvas, onToolChange]);
@@ -662,7 +663,6 @@ export default function Canvas({
 
   const handleEscapeKey = useCallback((e) => {
     if (e.key === 'Escape' && imagePreview) {
-      URL.revokeObjectURL(imagePreview.url);
       setImagePreview(null);
       setMousePosition({ x: 0, y: 0 });
       console.log('🚫 Image placement cancelled');
@@ -1035,7 +1035,7 @@ export default function Canvas({
     }
   }, [selectedTool, drawing, selectedColor, backgroundColor, strokeWidth, strokeStyle, opacity, panning.panOffset, broadcastDrawingImmediate, drawDirectlyOnCanvas, eraser, selection, shapes, saveToHistory, redrawCanvas]);
 
-  // ==================== SOCKET EVENT HANDLERS ====================
+  // ==================== SOCKET EVENT HANDLERS - UPDATED FOR IMAGES ====================
 
   const handleRemoteDrawing = useCallback((data) => {
     if (data.userId === socket?.id) return;
@@ -1059,7 +1059,8 @@ export default function Canvas({
       height: data.height,
       src: data.src,
       backgroundColor: data.backgroundColor,
-      expiration: data.expiration
+      expiration: data.expiration,
+      name: data.name // FIX: Include image name
     };
 
     setShapes(prev => {
@@ -1084,12 +1085,18 @@ export default function Canvas({
       }
     }
 
+    // FIX: Handle remote image loading with base64
     if (data.tool === 'image' && data.src) {
       const img = new Image();
       img.onload = () => {
         images.setLoadedImages(prev => new Map(prev.set(newShape.id, img)));
+        requestAnimationFrame(() => redrawCanvas());
+        console.log(`🖼️ Remote image "${data.name}" loaded and displayed`);
       };
-      img.src = data.src;
+      img.onerror = () => {
+        console.error('❌ Failed to load remote image:', data.name);
+      };
+      img.src = data.src; // Base64 data URL works across clients
     }
 
     requestAnimationFrame(() => redrawCanvas());

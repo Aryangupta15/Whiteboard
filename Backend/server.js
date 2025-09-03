@@ -14,8 +14,9 @@ const PORT = process.env.PORT || 3000;
 // Store room data
 const rooms = new Map();
 
-// Middleware to parse JSON
-app.use(express.json());
+// FIX: Middleware to parse JSON with increased limits for base64 images
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Serve static files from Frontend build
 app.use(express.static(path.join(__dirname, '../Frontend/dist')));
@@ -31,7 +32,8 @@ const io = new Server(server, {
     transports: ['websocket', 'polling'],
     allowEIO3: true,
     pingTimeout: 60000,
-    pingInterval: 25000
+    pingInterval: 25000,
+    maxHttpBufferSize: 1e7 // FIX: 10MB for large base64 images
 });
 
 // Handle socket connections
@@ -67,9 +69,10 @@ io.on("connection", (socket) => {
 
         console.log(`✅ ${socket.userName} (${socket.id}) joined room ${roomId}`);
 
-        // Send current canvas state to new user (only to this user)
+        // FIX: Send current canvas state to new user (including images)
         if (room.canvasState.length > 0) {
             socket.emit("canvasState", room.canvasState);
+            console.log(`📤 Sent ${room.canvasState.length} shapes to new user (including images)`);
         }
 
         // Notify others in room about new user
@@ -90,6 +93,7 @@ io.on("connection", (socket) => {
     let drawingBuffer = [];
     let broadcastTimeout = null;
 
+    // FIX: Enhanced drawing handler for images
     socket.on("drawing", (data) => {
         if (!socket.currentRoom) return;
 
@@ -104,6 +108,11 @@ io.on("connection", (socket) => {
             timestamp: Date.now()
         };
 
+        // FIX: Log image operations for debugging
+        if (data.tool === 'image') {
+            console.log(`🖼️ Image broadcast: "${data.name}" (${data.width}x${data.height}) by ${socket.userName}`);
+        }
+
         // Update canvas state efficiently
         if (data.tool === 'pen' || data.tool === 'laser') {
             // For pen/laser, update existing stroke or add new one
@@ -114,11 +123,11 @@ io.on("connection", (socket) => {
                 room.canvasState.push(drawingData);
             }
         } else {
-            // For other tools, just add to state
+            // FIX: For other tools including images, add to state
             room.canvasState.push(drawingData);
         }
 
-        // Immediate broadcast for better real-time performance
+        // FIX: Immediate broadcast for better real-time performance
         socket.to(socket.currentRoom).emit("drawing", drawingData);
     });
 
@@ -310,8 +319,8 @@ app.get("/rooms", (req, res) => {
     });
 });
 
-// Catch-all handler for React routing (MUST be after API routes)
-app.get('*splat', (req, res) => {
+// FIX: Catch-all handler for React routing (MUST be after API routes)
+app.get('/{*splat}', (req, res) => {
     res.sendFile(path.join(__dirname, '../Frontend/dist/index.html'));
 });
 

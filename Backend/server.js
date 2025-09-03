@@ -197,7 +197,7 @@ io.on("connection", (socket) => {
             room.canvasState = [];
         }
 
-        console.log(`🧹 Canvas cleared by ${socket.userName} in room ${socket.currentRoom}`);
+        console.log(`Canvas cleared by ${socket.userName} in room ${socket.currentRoom}`);
         socket.to(socket.currentRoom).emit("clearCanvas");
     });
 
@@ -320,7 +320,7 @@ app.get("/rooms", (req, res) => {
 });
 
 // FIX: Catch-all handler for React routing (MUST be after API routes)
-app.get('/{*splat}', (req, res) => {
+app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '../Frontend/dist/index.html'));
 });
 

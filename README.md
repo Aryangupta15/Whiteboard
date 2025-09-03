@@ -199,10 +199,9 @@ We welcome contributions from the community! Here's how you can help:
 ***
 
 
-
 ## 👥 Authors
-- Vikash Kumar - [GitHub][(https://github.com/dev1](https://github.com/power2loop))
+
 - Aryan Gupta - [GitHub][(https://github.com/dev2](https://github.com/Aryangupta15))
+- Vikash Kumar - [GitHub][(https://github.com/dev1](https://github.com/power2loop))
 
 **Built with ❤️ by two developers for creative collaboration**
-

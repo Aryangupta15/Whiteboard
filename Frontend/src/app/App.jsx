@@ -40,12 +40,6 @@ function App() {
   const canvasSaveRef = useRef(null);
   const canvasExportRef = useRef(null);
 
-  const onLeaveRoom = () => {
-    toast.warning("You leave the room", roomId);
-    socket.emit("leaveRoom", roomId);
-    setRoomId(null);
-  };
-
   // Collaboration states
   const [roomId, setRoomId] = useState("");
   const [isConnected, setIsConnected] = useState(false);
@@ -53,6 +47,13 @@ function App() {
 
   // Image trigger function state
   const [imageTriggerFunc, setImageTriggerFunc] = useState(null);
+
+  const onLeaveRoom = () => {
+    toast.warning("You leave the room", roomId);
+    socket.emit("leaveRoom", roomId);
+    setRoomId("");
+  };
+
 
   // Socket connection management
   useEffect(() => {

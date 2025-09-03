@@ -8,8 +8,8 @@ import { GoCopy } from "react-icons/go";
 import { AiOutlineDelete } from "react-icons/ai";
 import { IoIosLink } from "react-icons/io";
 
-const strokeColors = ['#EF4444', '#22C55E', '#3B82F6','#ffffffff','#000000ff' ,'#F59E42','#00fffbff','#F8A5B3'];
-const backgroundColors = ['#F8A5B3','#000000ff', '#BBF7D0','#ffffffff', '#93E7FF', '#FDE68A', '#22C55E'];
+const strokeColors = ['#EF4444', '#22C55E', '#3B82F6', '#ffffffff', '#000000ff', '#F59E42', '#00fffbff', '#F8A5B3'];
+const backgroundColors = ['#F8A5B3', '#000000ff', '#BBF7D0', '#ffffffff', '#93E7FF', '#FDE68A', '#22C55E'];
 
 const Toolbar = ({
     selectedColor,
@@ -37,20 +37,20 @@ const Toolbar = ({
     };
 
     const handleClear = () => {
-  if (onClearCanvas) {
-    // Enhanced confirmation dialog
-    const confirmed = window.confirm(
-      '⚠️ Clear entire canvas?\n\nThis will delete everything from the canvas.\n\nAre you sure you want to continue?'
-    );
-    if (confirmed) {
-      try {
-        onClearCanvas();
-      } catch (error) {
-        console.error('Failed to clear canvas:', error);
-      }
-    }
-  }
-};
+        if (onClearCanvas) {
+            // Enhanced confirmation dialog
+            const confirmed = window.confirm(
+                '⚠️ Clear entire canvas?\n\nThis will delete everything from the canvas.\n\nAre you sure you want to continue?'
+            );
+            if (confirmed) {
+                try {
+                    onClearCanvas();
+                } catch (error) {
+                    console.error('Failed to clear canvas:', error);
+                }
+            }
+        }
+    };
 
 
     const getStrokeWidthClass = (width) => {
@@ -127,12 +127,6 @@ const Toolbar = ({
                         onClick={() => onStrokeStyleSelect('dotted')}
                     >
                         <CgBorderStyleDotted />
-                    </button>
-                    <button
-                        className={`option-btn stroke-style ${strokeStyle === 'wavy' ? 'selected' : ''}`}
-                        onClick={() => onStrokeStyleSelect('wavy')}
-                    >
-                        <PiWaveSineDuotone />
                     </button>
                 </div>
             </div>

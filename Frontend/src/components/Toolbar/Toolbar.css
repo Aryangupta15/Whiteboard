@@ -78,7 +78,7 @@
 /* Option buttons */
 .option-group {
     display: flex;
-    gap: 8px;
+    gap: 9px;
     margin-bottom: 3px;
     flex-wrap: wrap;
 }

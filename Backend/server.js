@@ -326,6 +326,6 @@ app.get('/{*splat}', (req, res) => {
 
 // Start server with HTTP
 server.listen(PORT, () => {
-    console.log(`🚀 Express + Socket.IO server is running on http://localhost:${PORT}`);
-    console.log(`📊 Room info available at: http://localhost:${PORT}/rooms`);
+    console.log(` Express + Socket.IO server is running on http://localhost:${PORT}`);
+    console.log(`Room info available at: http://localhost:${PORT}/rooms`);
 });

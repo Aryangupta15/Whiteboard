@@ -272,6 +272,15 @@ export default function Canvas({
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
 
+        // FIX: Apply stroke style for pen and laser
+        if (shape.strokeStyle === 'dashed') {
+          ctx.setLineDash([10, 5]);
+        } else if (shape.strokeStyle === 'dotted') {
+          ctx.setLineDash([2, 8]);
+        } else {
+          ctx.setLineDash([]);
+        }
+
         if (shape.tool === 'laser') {
           const laserColor = getLaserColor(shape.color || selectedColor);
           ctx.strokeStyle = laserColor;
@@ -327,6 +336,15 @@ export default function Canvas({
         ctx.globalAlpha = isFaded ? 0.3 : (shape.opacity || 1);
         ctx.strokeStyle = shape.color || '#000000';
         ctx.lineWidth = shape.strokeWidth || 2;
+
+        // FIX: Apply stroke style for shapes
+        if (shape.strokeStyle === 'dashed') {
+          ctx.setLineDash([10, 5]);
+        } else if (shape.strokeStyle === 'dotted') {
+          ctx.setLineDash([2, 8]);
+        } else {
+          ctx.setLineDash([]);
+        }
 
         if (shape.backgroundColor && shape.backgroundColor !== '#ffffff') {
           ctx.fillStyle = shape.backgroundColor;
@@ -427,6 +445,15 @@ export default function Canvas({
         ctx.lineJoin = 'round';
         ctx.globalAlpha = opacity / 100;
 
+        // FIX: Apply stroke style for pen preview
+        if (strokeStyle === 'dashed') {
+          ctx.setLineDash([10, 5]);
+        } else if (strokeStyle === 'dotted') {
+          ctx.setLineDash([2, 8]);
+        } else {
+          ctx.setLineDash([]);
+        }
+
         ctx.beginPath();
         ctx.moveTo(drawing.penPoints[0].x, drawing.penPoints[0].y);
         for (let i = 1; i < drawing.penPoints.length; i++) {
@@ -445,6 +472,15 @@ export default function Canvas({
         ctx.shadowColor = laserColor;
         ctx.shadowBlur = 15;
 
+        // FIX: Apply stroke style for laser preview
+        if (strokeStyle === 'dashed') {
+          ctx.setLineDash([10, 5]);
+        } else if (strokeStyle === 'dotted') {
+          ctx.setLineDash([2, 8]);
+        } else {
+          ctx.setLineDash([]);
+        }
+
         ctx.beginPath();
         ctx.moveTo(drawing.laserPoints[0].x, drawing.laserPoints[0].y);
         for (let i = 1; i < drawing.laserPoints.length; i++) {
@@ -457,7 +493,15 @@ export default function Canvas({
         ctx.strokeStyle = selectedColor;
         ctx.lineWidth = strokeWidth;
         ctx.globalAlpha = 0.7;
-        ctx.setLineDash([5, 5]);
+
+        // FIX: Apply stroke style for shape preview
+        if (strokeStyle === 'dashed') {
+          ctx.setLineDash([10, 5]);
+        } else if (strokeStyle === 'dotted') {
+          ctx.setLineDash([2, 8]);
+        } else {
+          ctx.setLineDash([5, 5]); // Keep preview dashed for better visibility
+        }
 
         ctx.beginPath();
         switch (selectedTool) {
@@ -510,6 +554,7 @@ export default function Canvas({
       ctx.lineWidth = ERASER_RADIUS * 2;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
+      ctx.setLineDash([]); // Always solid for eraser
 
       ctx.beginPath();
       ctx.moveTo(eraser.eraserPath[0].x, eraser.eraserPath[0].y);
@@ -526,14 +571,14 @@ export default function Canvas({
       ctx.strokeStyle = '#3b82f6';
       ctx.fillStyle = 'rgba(59, 130, 246, 0.1)';
       ctx.lineWidth = 1;
-      ctx.setLineDash([5, 5]);
+      ctx.setLineDash([5, 5]); // Always dashed for selection
       ctx.fillRect(selection.selectionBox.x, selection.selectionBox.y, selection.selectionBox.width, selection.selectionBox.height);
       ctx.strokeRect(selection.selectionBox.x, selection.selectionBox.y, selection.selectionBox.width, selection.selectionBox.height);
       ctx.restore();
     }
 
     ctx.restore();
-  }, [canvasBackgroundColor, panning.panOffset, shapes, drawing, selectedTool, selectedColor, strokeWidth, opacity, eraser, selection, images.loadedImages, getLaserColor, justAddedImage]);
+  }, [canvasBackgroundColor, panning.panOffset, shapes, drawing, selectedTool, selectedColor, strokeWidth, strokeStyle, opacity, eraser, selection, images.loadedImages, getLaserColor, justAddedImage]);
 
   useLayoutEffect(() => {
     redrawCanvas();

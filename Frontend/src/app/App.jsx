@@ -51,6 +51,7 @@ function App() {
   const onLeaveRoom = () => {
     toast.warning("You leave the room", roomId);
     socket.emit("leaveRoom", roomId);
+    window.history.pushState(null, '', window.location.pathname);
     setRoomId("");
   };
 
@@ -73,15 +74,21 @@ function App() {
     };
 
     const handleUserJoined = (userData) => {
-      // console.log('User joined:', userData);
-      toast.info("User joined");
-      setRoomUsers(prev => [...prev.filter(u => u.id !== userData.userId), userData]);
-    };
+  toast.info(`User joined`);
+  setRoomUsers(prev => {
+    // Ensure consistent object shape { id, name, ... }
+    const newUser = { id: userData.userId, ...userData };
 
-    const handleUserLeft = (userData) => {
-      toast.warning("User left")
-      setRoomUsers(prev => prev.filter(u => u.id !== userData.userId));
-    };
+    // Remove if already exists, then add fresh
+    return [...prev.filter(u => u.id !== newUser.id), newUser];
+  });
+};
+
+const handleUserLeft = (userData) => {
+  toast.warning(`User left`);
+  setRoomUsers(prev => prev.filter(u => u.id !== userData.userId));
+};
+
 
     socket.on('connect', handleConnect);
     socket.on('disconnect', handleDisconnect);

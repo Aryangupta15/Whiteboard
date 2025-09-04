@@ -67,6 +67,9 @@ export default function Canvas({
   const lastCursorBroadcast = useRef(0);
   const fileInputRef = useRef(null);
 
+  // NEW: Add laser trail broadcasting
+  const lastLaserBroadcast = useRef(0);
+
   const [shapes, setShapes] = useState([]);
   const [remoteCursors, setRemoteCursors] = useState(new Map());
   const [imagePreview, setImagePreview] = useState(null);
@@ -114,7 +117,8 @@ export default function Canvas({
     if (color === '#ffffffff') {
       return '#FFFFFF';
     }
-    return color;
+    // FIX: Default to black for laser
+    return color || '#000000';
   }, []);
 
   // ==================== SAVE/EXPORT FUNCTIONS ====================
@@ -187,6 +191,25 @@ export default function Canvas({
       timestamp: Date.now()
     });
   }, [socket, roomId]);
+
+  // NEW: Broadcast laser trail in real-time
+  const broadcastLaserTrail = useCallback((points) => {
+    if (!socket || !roomId || !points || points.length === 0) return;
+
+    const now = Date.now();
+    if (now - lastLaserBroadcast.current < 25) return; // 40 FPS
+    lastLaserBroadcast.current = now;
+
+    socket.emit('laser-trail', {
+      points: points,
+      color: selectedColor || '#000000',
+      strokeWidth,
+      opacity: opacity / 100,
+      roomId,
+      userId: socket.id,
+      timestamp: now
+    });
+  }, [socket, roomId, selectedColor, strokeWidth, opacity]);
 
   const broadcastPenStroke = useCallback((points, strokeId) => {
     if (!socket || !roomId) return;
@@ -282,7 +305,8 @@ export default function Canvas({
         }
 
         if (shape.tool === 'laser') {
-          const laserColor = getLaserColor(shape.color || selectedColor);
+          // FIX: Use black by default for laser, with glow effect
+          const laserColor = getLaserColor(shape.color || '#000000');
           ctx.strokeStyle = laserColor;
           ctx.shadowColor = laserColor;
           ctx.shadowBlur = 10;
@@ -463,14 +487,15 @@ export default function Canvas({
         ctx.restore();
       } else if (selectedTool === "laser" && drawing.laserPoints && drawing.laserPoints.length > 0) {
         ctx.save();
-        const laserColor = getLaserColor(selectedColor);
+        // FIX: Use black by default for laser preview with enhanced glow
+        const laserColor = getLaserColor(selectedColor || '#000000');
         ctx.strokeStyle = laserColor;
         ctx.lineWidth = strokeWidth + 2;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.globalAlpha = opacity / 100;
         ctx.shadowColor = laserColor;
-        ctx.shadowBlur = 15;
+        ctx.shadowBlur = 20;
 
         // FIX: Apply stroke style for laser preview
         if (strokeStyle === 'dashed') {
@@ -996,6 +1021,10 @@ export default function Canvas({
         }
       } else if (selectedTool === 'laser') {
         drawing.updateDrawing(point);
+        // NEW: Broadcast laser trail for real-time collaboration
+        if (drawing.laserPoints && drawing.laserPoints.length > 0) {
+          broadcastLaserTrail([...drawing.laserPoints, point]);
+        }
         requestAnimationFrame(() => redrawCanvas());
       } else if (SHAPE_TOOLS.includes(selectedTool)) {
         drawing.updateDrawing(point);
@@ -1010,7 +1039,7 @@ export default function Canvas({
     }
 
     cursor.updateMousePosition(e);
-  }, [selectedTool, panning.panOffset, drawing, broadcastCursor, broadcastPenStroke, cursor, drawDirectlyOnCanvas, eraser, selection, handleMouseMoveWithPreview, interpolatePoints, shapeIntersectsEraser, redrawCanvas]);
+  }, [selectedTool, panning.panOffset, drawing, broadcastCursor, broadcastPenStroke, broadcastLaserTrail, cursor, drawDirectlyOnCanvas, eraser, selection, handleMouseMoveWithPreview, interpolatePoints, shapeIntersectsEraser, redrawCanvas]);
 
   const handleMouseUp = useCallback((e) => {
     if (!isDrawingRef.current) return;
@@ -1034,7 +1063,8 @@ export default function Canvas({
           id: currentStrokeIdRef.current,
           tool: 'laser',
           points: drawing.laserPoints,
-          color: selectedColor,
+          // FIX: Use black by default for laser
+          color: selectedColor || '#000000',
           strokeWidth,
           strokeStyle,
           opacity: opacity / 100,
@@ -1147,6 +1177,36 @@ export default function Canvas({
     requestAnimationFrame(() => redrawCanvas());
   }, [socket?.id, images, redrawCanvas]);
 
+  // NEW: Handle remote laser trail
+  const handleRemoteLaserTrail = useCallback((data) => {
+    if (data.userId === socket?.id) return;
+
+    // Create temporary laser trail shape for remote user
+    const tempLaserShape = {
+      id: `temp_laser_${data.userId}`,
+      tool: 'laser',
+      points: data.points,
+      color: data.color || '#000000',
+      strokeWidth: data.strokeWidth,
+      opacity: data.opacity,
+      temporary: true,
+      expiration: Date.now() + 100 // Very short expiration for live trail
+    };
+
+    setShapes(prev => {
+      // Remove existing temporary laser for this user
+      const filtered = prev.filter(s => s.id !== tempLaserShape.id);
+      return [...filtered, tempLaserShape];
+    });
+
+    // Clean up temporary laser trail after short delay
+    setTimeout(() => {
+      setShapes(prev => prev.filter(s => s.id !== tempLaserShape.id));
+    }, 150);
+
+    requestAnimationFrame(() => redrawCanvas());
+  }, [socket?.id, redrawCanvas]);
+
   const handleRemotePenStroke = useCallback((data) => {
     if (data.userId === socket?.id) return;
 
@@ -1226,14 +1286,18 @@ export default function Canvas({
     // Add eraser collaboration listeners
     socket.on('shapes-erased', eraser.handleRemoteErase);
 
+    // NEW: Add laser trail listener
+    socket.on('laser-trail', handleRemoteLaserTrail);
+
     return () => {
       socket.off('drawing', handleRemoteDrawing);
       socket.off('penStroke', handleRemotePenStroke);
       socket.off('cursorMove', handleRemoteCursor);
       socket.off('clearCanvas', handleClearCanvas);
       socket.off('shapes-erased', eraser.handleRemoteErase);
+      socket.off('laser-trail', handleRemoteLaserTrail);
     };
-  }, [socket, handleRemoteDrawing, handleRemotePenStroke, handleRemoteCursor, handleClearCanvas, eraser.handleRemoteErase]);
+  }, [socket, handleRemoteDrawing, handleRemotePenStroke, handleRemoteCursor, handleClearCanvas, eraser.handleRemoteErase, handleRemoteLaserTrail]);
 
   useEffect(() => {
     setupCanvas();

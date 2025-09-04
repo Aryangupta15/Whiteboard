@@ -67,12 +67,12 @@ io.on("connection", (socket) => {
             socketId: socket.id
         });
 
-        console.log(`✅ ${socket.userName} (${socket.id}) joined room ${roomId}`);
+        console.log(`${socket.userName} (${socket.id}) joined room ${roomId}`);
 
         // FIX: Send current canvas state to new user (including images)
         if (room.canvasState.length > 0) {
             socket.emit("canvasState", room.canvasState);
-            console.log(`📤 Sent ${room.canvasState.length} shapes to new user (including images)`);
+            console.log(` Sent ${room.canvasState.length} shapes to new user (including images)`);
         }
 
         // Notify others in room about new user
@@ -110,7 +110,7 @@ io.on("connection", (socket) => {
 
         // FIX: Log image operations for debugging
         if (data.tool === 'image') {
-            console.log(`🖼️ Image broadcast: "${data.name}" (${data.width}x${data.height}) by ${socket.userName}`);
+            console.log(` Image broadcast: "${data.name}" (${data.width}x${data.height}) by ${socket.userName}`);
         }
 
         // Update canvas state efficiently
@@ -131,6 +131,33 @@ io.on("connection", (socket) => {
         socket.to(socket.currentRoom).emit("drawing", drawingData);
     });
 
+    // NEW: Handle real-time laser trail broadcasting 
+    let lastLaserBroadcast = 0;
+    socket.on("laser-trail", (data) => {
+        if (!socket.currentRoom) return;
+
+        const now = Date.now();
+        // Throttle laser broadcasts to 40 FPS for smooth performance
+        if (now - lastLaserBroadcast < 25) return;
+        lastLaserBroadcast = now;
+
+        // Broadcast laser trail data to other users in the room
+        const laserData = {
+            ...data,
+            userId: socket.userId,
+            userName: socket.userName,
+            userColor: socket.userColor,
+            timestamp: now
+        };
+
+        socket.to(socket.currentRoom).emit("laser-trail", laserData);
+
+        // Optional: Log laser activity (can be removed for performance)
+        if (data.isActive && data.trail && data.trail.length > 0) {
+            console.log(`🔴 Laser from ${socket.userName}: ${data.trail.length} points (${data.color})`);
+        }
+    });
+
     // Handle collaborative eraser operations
     socket.on("shapes-erased", (data) => {
         if (!socket.currentRoom) return;
@@ -143,7 +170,7 @@ io.on("connection", (socket) => {
             // Remove shapes from canvas state based on indices
             room.canvasState = data.updatedShapes || [];
 
-            console.log(`🗑️ User ${socket.userName} erased ${data.deletedIndices.length} shapes in room ${socket.currentRoom}`);
+            console.log(` User ${socket.userName} erased ${data.deletedIndices.length} shapes in room ${socket.currentRoom}`);
         }
 
         // Broadcast eraser operation to all other users in the room
@@ -247,7 +274,7 @@ io.on("connection", (socket) => {
 
                 // Clean up empty rooms
                 if (room.users.size === 0) {
-                    console.log(`🗂️ Cleaning up empty room: ${socket.currentRoom}`);
+                    console.log(`Cleaning up empty room: ${socket.currentRoom}`);
                     rooms.delete(socket.currentRoom);
                 }
             }
@@ -257,7 +284,7 @@ io.on("connection", (socket) => {
                 name: socket.userName
             });
 
-            console.log(`👋 ${socket.userName} left room ${socket.currentRoom}`);
+            console.log(` ${socket.userName} left room ${socket.currentRoom}`);
             socket.leave(socket.currentRoom);
             socket.currentRoom = null;
         }
@@ -327,5 +354,5 @@ app.get('/', (req, res) => {
 // Start server with HTTP
 server.listen(PORT, () => {
     console.log(` Express + Socket.IO server is running on http://localhost:${PORT}`);
-    console.log(`Room info available at: http://localhost:${PORT}/rooms`);
+    console.log(` Room info available at: http://localhost:${PORT}/rooms`);
 });

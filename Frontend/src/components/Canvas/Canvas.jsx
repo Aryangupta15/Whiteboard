@@ -13,7 +13,7 @@ import "./Canvas.css";
 
 const SHAPE_TOOLS = ["square", "diamond", "circle", "arrow", "line", "rectangle"];
 const ERASER_RADIUS = 2;
-const LASER_DURATION = 3000;
+const LASER_DURATION = 1000;
 
 const throttle = (func, delay) => {
   let timeoutId;
@@ -285,8 +285,8 @@ export default function Canvas({
           const laserColor = getLaserColor(shape.color || selectedColor);
           ctx.strokeStyle = laserColor;
           ctx.shadowColor = laserColor;
-          ctx.shadowBlur = 15;
-          ctx.lineWidth = (shape.strokeWidth || 2) + 2;
+          ctx.shadowBlur = 10;
+          ctx.lineWidth = (shape.strokeWidth || 2) + 1;
 
           if (shape.expiration) {
             const timeLeft = shape.expiration - Date.now();

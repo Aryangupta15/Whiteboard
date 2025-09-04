@@ -162,7 +162,7 @@ io.on("connection", (socket) => {
 
         const now = Date.now();
         // Throttle to max 20 updates per second
-        if (now - lastCursorBroadcast < 50) return;
+        if (now - lastCursorBroadcast < 33) return;
         lastCursorBroadcast = now;
 
         const cursorData = {

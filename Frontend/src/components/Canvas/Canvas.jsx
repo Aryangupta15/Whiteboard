@@ -315,7 +315,9 @@ export default function Canvas({
           if (shape.expiration) {
             const timeLeft = shape.expiration - Date.now();
             const fadeRatio = timeLeft / LASER_DURATION;
-            ctx.globalAlpha = Math.max(0.3, fadeRatio) * (shape.opacity || 1);
+            // Ease-out cubic for smooth fade
+            const smoothFade = 1 - Math.pow(1 - fadeRatio, 3);
+            ctx.globalAlpha = smoothFade;
           }
         } else {
           ctx.strokeStyle = shape.color || '#000000';

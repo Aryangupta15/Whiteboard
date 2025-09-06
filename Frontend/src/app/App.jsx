@@ -7,13 +7,14 @@ import Rightbar from '../components/Rightbar/Rightbar';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import socket from '../services/socket/socket';
 import { toast } from "react-toastify";
-import { useAuthState } from "react-firebase-hooks/auth";
-import { auth } from "../services/firebase"; // adjust import
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "../services/authentication/auth";
 import "./App.css";
+
 
 function App() {
 
-  const [user] = useAuthState(auth); // ✅ reactive auth user
+  const [user, setUser] = useState(null);
 
   const [selectedTool, setSelectedTool] = useState("hand");
   const [selectedColor, setSelectedColor] = useState("#000000");
@@ -51,6 +52,14 @@ function App() {
 
   // Image trigger function state
   const [imageTriggerFunc, setImageTriggerFunc] = useState(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const onLeaveRoom = () => {
     toast.warning("You leave the room", roomId);
@@ -110,22 +119,27 @@ const handleUserLeft = (userData) => {
   }, []);
 
   // Auto-join room from URL
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const roomFromUrl = urlParams.get('room');
+useEffect(() => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const roomFromUrl = urlParams.get("room");
 
-    if (roomFromUrl && !roomId && user) {
-      setRoomId(roomFromUrl);
-      socket.emit('joinRoom', {
-        roomId: roomFromUrl,
-        userInfo: {
-          userId: user.userId,
-          name: user.displayName || "Anonymous",
-          color: selectedColor
-        }
-      });
-    }
-  }, [roomId, selectedColor]);
+  if (roomFromUrl && !roomId && socket.id) {  // ✅ wait until socket.id exists
+    setRoomId(roomFromUrl);
+
+    socket.emit("joinRoom", {
+      roomId: roomFromUrl,
+      userInfo: {
+        userId: user?.uid || socket.id,
+        name:
+          user?.displayName ||
+          (user?.email ? user.email.split("@")[0] : null), // ✅ safe
+        color: selectedColor,
+      },
+    });
+  }
+}, [roomId, selectedColor, user, socket.id]); // ✅ add socket.id as dependency
+
+
 
   const handleToolSelect = (tool) => {
     setSelectedTool(tool);

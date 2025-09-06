@@ -4,13 +4,17 @@ import Canvas from '../components/Canvas/Canvas';
 import BottomControls from '../components/BottomControls/BottomControls';
 import Topbar from '../components/Topbar/Topbar';
 import Rightbar from '../components/Rightbar/Rightbar';
-import "./App.css";
 import { useState, useRef, useEffect, useCallback } from 'react';
 import socket from '../services/socket/socket';
 import { toast } from "react-toastify";
-
+import { useAuthState } from "react-firebase-hooks/auth";
+import { auth } from "../services/firebase"; // adjust import
+import "./App.css";
 
 function App() {
+
+  const [user] = useAuthState(auth); // ✅ reactive auth user
+
   const [selectedTool, setSelectedTool] = useState("hand");
   const [selectedColor, setSelectedColor] = useState("#000000");
   const [showToolbar, setShowToolbar] = useState(false);
@@ -110,13 +114,13 @@ const handleUserLeft = (userData) => {
     const urlParams = new URLSearchParams(window.location.search);
     const roomFromUrl = urlParams.get('room');
 
-    if (roomFromUrl && !roomId) {
+    if (roomFromUrl && !roomId && user) {
       setRoomId(roomFromUrl);
       socket.emit('joinRoom', {
         roomId: roomFromUrl,
         userInfo: {
-          userId: socket.id,
-          name: `User ${socket.id?.slice(0, 6) || 'Unknown'}`,
+          userId: user.userId,
+          name: user.displayName || "Anonymous",
           color: selectedColor
         }
       });
